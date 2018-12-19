@@ -1,0 +1,6 @@
+CREATE TABLE pet (
+	id		SERIAL	PRIMARY KEY,
+	name	TEXT	NOT NULL,
+	species	TEXT	NOT NULL,
+	owner	INT	NOT NULL REFERENCES owner(id)
+)
