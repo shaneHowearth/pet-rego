@@ -2,7 +2,10 @@ package main
 
 import (
 	"log"
+	"net/http"
+	"net/http/httptest"
 	"os"
+	"strconv"
 	"testing"
 )
 
@@ -41,14 +44,54 @@ func clearTables() {
 }
 
 const ownerTableCreationQuery = `CREATE TABLE IF NOT EXISTS owner
-(id UUID    NOT NULL DEFAULT uuid_generate_v4() PRIMARY KEY,
+(id SERIAL PRIMARY KEY,
  firstname       TEXT    NOT NULL,
  surname         TEXT    NOT NULL
 )`
 
 const petTableCreationQuery = `CREATE TABLE IF NOT EXISTS pet
-(id UUID    NOT NULL DEFAULT uuid_generate_v4() PRIMARY KEY,
+(id SERIAL PRIMARY KEY,
  name    TEXT    NOT NULL,
  species TEXT    NOT NULL,
- owner   UUID    NOT NULL REFERENCES owner(id)
+ owner   INT    NOT NULL REFERENCES owner(id)
 )`
+
+func executeRequest(req *http.Request) *httptest.ResponseRecorder {
+	rr := httptest.NewRecorder()
+	a.Router.ServeHTTP(rr, req)
+
+	return rr
+}
+
+func checkResponseCode(t *testing.T, expected, actual int) {
+	if expected != actual {
+		t.Errorf("Expected response code %d. Got %d\n", expected, actual)
+	}
+}
+
+func addOwnersAndPets(count int) {
+	if count < 1 {
+		count = 1
+	}
+
+	// Pets must have an owner
+	// We'll create 1 to n-1 owners so that one owner will have multiple pets
+	ownerCount := count
+	if count != 1 {
+		ownerCount--
+	}
+
+	for j := 0; j < ownerCount; j++ {
+		jCount := strconv.Itoa(j)
+		_, err := a.DB.Exec("INSERT INTO owner(firstname, surname) VALUES($1, $2)", "Name "+jCount, "lName "+jCount)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+	for i := 0; i < count; i++ {
+		_, err := a.DB.Exec("INSERT INTO pet(name, species, owner) VALUES($1, $2, $3)", "Pet "+strconv.Itoa(i), "Rat "+strconv.Itoa(i), strconv.Itoa(((i+1)%ownerCount)+1))
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+}
