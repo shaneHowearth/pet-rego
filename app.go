@@ -97,3 +97,53 @@ func (a *App) createPet(w http.ResponseWriter, r *http.Request) {
 
 	respondWithJSON(w, http.StatusCreated, p)
 }
+
+func (a *App) getOwner(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	_, err := strconv.Atoi(vars["id"])
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid pet ID")
+		return
+	}
+
+	p := Owner{ID: vars["id"]}
+	if err := p.getOwner(a.DB); err != nil {
+		switch err {
+		case sql.ErrNoRows:
+			respondWithError(w, http.StatusNotFound, "Owner not found")
+		default:
+			respondWithError(w, http.StatusInternalServerError, err.Error())
+		}
+		return
+	}
+
+	respondWithJSON(w, http.StatusOK, p)
+}
+
+func (a *App) getOwners(w http.ResponseWriter, r *http.Request) {
+
+	pets, err := getOwners(a.DB)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	respondWithJSON(w, http.StatusOK, pets)
+}
+
+func (a *App) createOwner(w http.ResponseWriter, r *http.Request) {
+	var o Owner
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&o); err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+	defer r.Body.Close()
+
+	if err := o.createOwner(a.DB); err != nil {
+		respondWithError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	respondWithJSON(w, http.StatusCreated, o)
+}
