@@ -32,10 +32,24 @@ func (a *App) Initialise(user, password, dbname string) {
 	}
 
 	a.Router = mux.NewRouter()
+	a.initialiseRoutes()
 }
 
 // Run -
-func (a *App) Run(addr string) {}
+func (a *App) Run(addr string) {
+	log.Fatal(http.ListenAndServe(":8000", a.Router))
+}
+
+func (a *App) initialiseRoutes() {
+	a.Router.HandleFunc("/pet", a.getPets).Methods("GET")
+	a.Router.HandleFunc("/pet", a.createPet).Methods("POST")
+	a.Router.HandleFunc("/pet/{id:[0-9]+}", a.getPet).Methods("GET")
+	a.Router.HandleFunc("/owner", a.getOwners).Methods("GET")
+	a.Router.HandleFunc("/owner", a.createOwner).Methods("POST")
+	a.Router.HandleFunc("/owner/{id:[0-9]+}", a.getOwner).Methods("GET")
+	a.Router.HandleFunc("/owner/{id:[0-9]+}/pets", a.getOwnersPets).Methods("GET")
+}
+
 func respondWithError(w http.ResponseWriter, code int, message string) {
 	respondWithJSON(w, code, map[string]string{"error": message})
 }
