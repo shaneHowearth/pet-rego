@@ -106,8 +106,8 @@ func (a *App) getOwner(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	p := Owner{ID: vars["id"]}
-	if err := p.getOwner(a.DB); err != nil {
+	o := Owner{ID: vars["id"]}
+	if err := o.getOwner(a.DB); err != nil {
 		switch err {
 		case sql.ErrNoRows:
 			respondWithError(w, http.StatusNotFound, "Owner not found")
@@ -117,18 +117,18 @@ func (a *App) getOwner(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respondWithJSON(w, http.StatusOK, p)
+	respondWithJSON(w, http.StatusOK, o)
 }
 
 func (a *App) getOwners(w http.ResponseWriter, r *http.Request) {
 
-	pets, err := getOwners(a.DB)
+	owners, err := getOwners(a.DB)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	respondWithJSON(w, http.StatusOK, pets)
+	respondWithJSON(w, http.StatusOK, owners)
 }
 
 func (a *App) createOwner(w http.ResponseWriter, r *http.Request) {
@@ -146,4 +146,22 @@ func (a *App) createOwner(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respondWithJSON(w, http.StatusCreated, o)
+}
+
+func (a *App) getOwnersPets(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	_, err := strconv.Atoi(vars["id"])
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid owner ID")
+		return
+	}
+
+	o := Owner{ID: vars["id"]}
+	owners, err := o.getOwnersPets(a.DB)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	respondWithJSON(w, http.StatusOK, owners)
 }
