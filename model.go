@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"strings"
 )
 
 // Pet -
@@ -10,6 +11,7 @@ type Pet struct {
 	Name    string `json:"name"`
 	Species string `json:"species"`
 	Owner   string `json:"owner"`
+	Food    string `json:"food,omitempty"`
 }
 
 // Owner -
@@ -60,13 +62,30 @@ func getOwners(db *sql.DB) ([]Owner, error) {
 // Pets
 
 func (p *Pet) getPet(db *sql.DB) error {
-	return db.QueryRow("SELECT name, species, owner FROM pet WHERE id=$1", p.ID).Scan(&p.Name, &p.Species, &p.Owner)
+	var f sql.NullString
+	err := db.QueryRow("SELECT name, species, food, owner FROM pet WHERE id=$1", p.ID).Scan(&p.Name, &p.Species, &f, &p.Owner)
+	if f.Valid != false {
+		p.Food = f.String
+	}
+	return err
 }
 
 func (p *Pet) createPet(db *sql.DB) error {
+	if p.Food == "" {
+		switch strings.ToLower(p.Species) {
+		case "dog":
+			p.Food = "bones"
+		case "cat":
+			p.Food = "fish"
+		case "chicken":
+			p.Food = "corn"
+		case "snake":
+			p.Food = "mice"
+		}
+	}
 	err := db.QueryRow(
-		"INSERT INTO pet(name, species, owner) VALUES($1, $2, $3) RETURNING id",
-		p.Name, p.Species, p.Owner).Scan(&p.ID)
+		"INSERT INTO pet(name, species, owner, food) VALUES($1, $2, $3, $4) RETURNING id",
+		p.Name, p.Species, p.Owner, p.Food).Scan(&p.ID)
 
 	if err != nil {
 		return err
@@ -76,7 +95,7 @@ func (p *Pet) createPet(db *sql.DB) error {
 }
 
 func getPets(db *sql.DB) ([]Pet, error) {
-	rows, err := db.Query("SELECT id, name, species, owner FROM pet")
+	rows, err := db.Query("SELECT id, name, species, food, owner FROM pet")
 	if err != nil {
 		return nil, err
 	}
@@ -87,8 +106,12 @@ func getPets(db *sql.DB) ([]Pet, error) {
 
 	for rows.Next() {
 		var p Pet
-		if err := rows.Scan(&p.ID, &p.Name, &p.Species, &p.Owner); err != nil {
+		var f sql.NullString
+		if err := rows.Scan(&p.ID, &p.Name, &p.Species, &f, &p.Owner); err != nil {
 			return nil, err
+		}
+		if f.Valid != false {
+			p.Food = f.String
 		}
 		pets = append(pets, p)
 	}
@@ -97,7 +120,7 @@ func getPets(db *sql.DB) ([]Pet, error) {
 }
 
 func (o *Owner) getOwnersPets(db *sql.DB) ([]Pet, error) {
-	rows, err := db.Query("SELECT id, name, species, owner FROM pet WHERE owner = $1", o.ID)
+	rows, err := db.Query("SELECT id, name, species, food, owner FROM pet WHERE owner = $1", o.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -108,8 +131,12 @@ func (o *Owner) getOwnersPets(db *sql.DB) ([]Pet, error) {
 
 	for rows.Next() {
 		var p Pet
-		if err := rows.Scan(&p.ID, &p.Name, &p.Species, &p.Owner); err != nil {
+		var f sql.NullString
+		if err := rows.Scan(&p.ID, &p.Name, &p.Species, &f, &p.Owner); err != nil {
 			return nil, err
+		}
+		if f.Valid != false {
+			p.Food = f.String
 		}
 		Pets = append(Pets, p)
 	}

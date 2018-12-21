@@ -16,6 +16,14 @@ curl --header "Content-Type: application/json" \
   http://localhost:8000/pet
 echo ""
 
+# Create a Pet with food
+echo "Create a Pet with food"
+curl --header "Content-Type: application/json" \
+  --request POST \
+  --data '{"name":"abc","species":"xyz", "owner":"1", "food":"Chips"}' \
+  http://localhost:8000/pet
+echo ""
+
 # Get an owner
 echo "Get Owner 1"
 curl http://localhost:8000/owner/1
